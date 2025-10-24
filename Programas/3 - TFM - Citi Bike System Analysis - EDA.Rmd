@@ -1,0 +1,95 @@
+---
+title: "TFM - Citi Bike System Analysis"
+author: "franmarq@gmail.com"
+date: "2024-11-09"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#library(openxlsx)
+library(tidyverse)
+library(lubridate)
+library(summarytools)
+library(knitr)
+
+```
+
+
+Inicialmente tenemos 8 variables, de las cuales 3 son caracter.
+
+
+
+
+```{r plots}
+
+plot1<-ggplot(data=datos_rds, mapping = aes(x=fecha_ride, y = after_stat(count))) +
+  geom_freqpoly(size=1) +
+  theme(axis.text.x=element_text(angle = 30, hjust = 1)) +
+  scale_x_date(breaks = "1 month", expand = c(0, 0),limits = as.Date(c("2022-10-31","2024-11-01")))
+plot1
+
+
+plot2 <- datos_rds %>% ggplot(aes(member_casual, fill = member_casual)) %+% geom_bar(position = "dodge")
+plot2
+
+plot3 <- datos_rds %>% ggplot(aes(start_station_name, fill = start_station_name)) %+% geom_bar(position = "dodge") %+%
+  theme(axis.text.x=element_text(angle = 30, hjust = 1))
+plot3
+
+plot4 <- datos_rds %>% ggplot(aes(rideable_type, fill = rideable_type)) %+% geom_bar(position = "dodge") %+%
+  theme(axis.text.x=element_text(angle = 30, hjust = 1))
+plot4
+
+plot5 <-    
+ ggplot(datos_rds, aes(member_casual,duracion_min)) +
+  geom_boxplot(aes(colour = member_casual))
+plot5
+
+plot6 <-    
+ ggplot(datos_rds, aes(start_station_name,duracion_min)) +
+  geom_boxplot(aes(colour = start_station_name))
+plot6
+
+plot7 <-    
+ ggplot(datos_rds, aes(rideable_type,duracion_min)) +
+  geom_boxplot(aes(colour = rideable_type))
+plot7
+
+
+plot11<-ggplot(data=datos_rds, mapping = aes(x=fecha_ride, y = after_stat(count))) +
+  geom_freqpoly(size=1,mapping = aes(colour = member_casual)) +
+  theme(axis.text.x=element_text(angle = 30, hjust = 1)) +
+  scale_x_date(breaks = "1 month", expand = c(0, 0),limits = as.Date(c("2022-10-31","2024-11-01")))
+plot11
+
+
+plot12<-ggplot(data=datos_rds, mapping = aes(x=fecha_ride, y = after_stat(count))) +
+  geom_freqpoly(size=1,mapping = aes(colour = start_station_name)) +
+  theme(axis.text.x=element_text(angle = 30, hjust = 1)) +
+  scale_x_date(breaks = "1 month", expand = c(0, 0),limits = as.Date(c("2022-10-31","2024-11-01")))
+plot12
+
+plot13<-ggplot(data=datos_rds, mapping = aes(x=fecha_ride, y = after_stat(count))) +
+  geom_freqpoly(size=1,mapping = aes(colour = rideable_type)) +
+  theme(axis.text.x=element_text(angle = 30, hjust = 1)) +
+  scale_x_date(breaks = "1 month", expand = c(0, 0),limits = as.Date(c("2022-10-31","2024-11-01")))
+plot13
+
+
+library(gridExtra)
+grid.arrange(plot1, plot2, plot3,plot4,plot5,plot6,plot7,plot11, plot12,plot13, ncol = 2)
+
+
+```
+
+
+```{r analisis_stationMiss}
+datos_rdsf<-datos_rds%>%
+    filter(start_station_name %in% c("Liberty St & Nassau St"))
+summary(datos_rdsf)
+
+```

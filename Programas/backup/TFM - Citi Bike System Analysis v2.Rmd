@@ -1,0 +1,99 @@
+---
+title: "TFM - Citi Bike System Analysis"
+author: "franmarq@gmail.com"
+date: "2024-11-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+```{r prepdata}
+start_time <- Sys.time()
+
+library(openxlsx)
+library(tidyverse)
+library(lubridate)
+
+# Definir la ruta de la carpeta
+ruta_carpeta <- "C:/Users/franm/OneDrive/Documents/Personales/Javier/Academicos/UGR - Estadistica Aplicada/Materias/24-25/TFM/data/nyc/citibike-tripdata"
+
+# Obtener una lista de todos los archivos CSV en la carpeta
+archivos_csv <- list.files(path = ruta_carpeta, pattern = "\\.csv$")
+
+# Función para leer y filtrar cada archivo
+leer_y_filtrar <- function(archivo) {
+  ruta_completa <- file.path(ruta_carpeta, archivo)
+  read_csv(ruta_completa, col_names = TRUE) %>%
+    select(rideable_type, started_at, ended_at, start_station_name, end_station_name, member_casual) %>%
+    filter(start_station_name %in% c("Central Park S & 6 Ave",
+                                    "E 41 St & Madison Ave (SE corner)",
+                                    "Liberty St & Nassau St",
+                                    "W 116 St & Amsterdam Ave",
+                                    "Mercer St & Spring St"))
+}
+
+# Aplicar la función a cada archivo y combinar los resultados
+datos_filtrados <- map_df(archivos_csv, leer_y_filtrar)
+
+# Mostrar los primeros registros para verificar
+head(datos_filtrados)
+
+
+end_time <- Sys.time()
+time_taken <- end_time - start_time
+print(time_taken)
+
+```
+
+
+```{r processing}
+# Convertir started_at y ended_at a objetos de fecha y hora
+datos_filtrados2 <- datos_filtrados %>%
+  mutate(
+    started_at = ymd_hms(started_at),
+    ended_at = ymd_hms(ended_at),
+    fecha_ride =   as_date(started_at),
+    duracion_min = as.numeric(round(difftime(ended_at, started_at, units = "mins"), 2))
+  )
+
+```
+
+
+
+```{r writerds}
+
+ruta_salida2 <- "C:/Users/franm/OneDrive/Documents/Personales/Javier/Academicos/UGR - Estadistica Aplicada/Materias/24-25/TFM/data/nyc/citibike-tripdata/datos_filtrados.rds"
+
+# Guardar los datos filtrados en formato RData
+saveRDS(datos_filtrados2, file = ruta_salida2)
+
+# Mensaje de confirmación
+print("Los datos filtrados se han guardado en:", ruta_salida)
+
+# Cargar los datos guardados
+datos_importados_rds <- readRDS(ruta_salida2)
+
+str(datos_importados_rds)
+
+#comprobar que el file leido es identico a generado antes
+identical(datos_filtrados2, datos_importados_rds)
+
+
+citibike_2324<-data.frame(datos_importados_rds)
+
+```
+
+
+```{r EDA}
+## Generar un resumen del conjunto de datos del tren
+
+library(summarytools)
+dfSummary(datos_importados_rds, plain.ascii = FALSE, style = "grid")
+
+```
+

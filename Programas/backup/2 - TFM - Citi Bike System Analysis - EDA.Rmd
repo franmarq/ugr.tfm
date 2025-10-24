@@ -1,0 +1,152 @@
+---
+title: "TFM - Citi Bike System Analysis"
+author: "franmarq@gmail.com"
+date: "2024-11-09"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#library(openxlsx)
+library(tidyverse)
+library(lubridate)
+library(summarytools)
+library(knitr)
+
+```
+
+configuramos el direcotio local de trabajo. 
+
+Cargamos las librerias de trabajo e Importamos la data previamente ubicada en el folder /data
+
+
+```{r prepdata}
+# Leer el archivo RDS
+ruta_salida2 <- "C:/Users/franm/OneDrive/Documents/Personales/Javier/Academicos/UGR - Estadistica Aplicada/Materias/24-25/TFM/data/datos_filtrados2.rds"
+
+# Cargar los datos guardados
+datos_importados_rds <- readRDS(ruta_salida2)
+#str(datos_importados_rds)
+datos_importados_rds%>%
+  glimpse()
+
+```
+
+
+
+```{r EDA, results='asis'}
+## Generar un resumen del conjunto de datos del tren
+
+ datos_importados_rds_sum_tbl <- datos_importados_rds %>%
+         dfSummary(plain.ascii = FALSE, style = "grid", graph.magnif = 0.75, method="render")
+ 
+ datos_importados_rds_sum_tbl%>%
+     select(-text.graph) %>%
+     knitr::kable(align = "c")
+
+```
+
+
+Aplicamos algunes ajustes iniciales al conjunto de forma de no tener problemas asociados a datos faltantes, incongruentes, fuera de ranfo   
+
+```{r evaltrans, results='asis'}
+## Generar un resumen del conjunto de datos del tren
+#dfSummary(datos_importados_rds, plain.ascii = FALSE, style = "grid")
+
+
+
+#Evaluation cases out range
+#dur_negativa <- subset(datos_importados_rds, duracion_min < 0)
+#fechas_fuera <- subset(datos_importados_rds, fecha_ride < '2022-11-01')
+
+#adjustments by imputation values
+datos_importados_rds$duracion_min[datos_importados_rds$duracion_min < 0]<-0
+datos_importados_rds$fecha_ride[datos_importados_rds$fecha_ride<'2022-11-01']<-'2022-11-01'
+datos_importados_rds$started_at[datos_importados_rds$started_at<'2022-11-01']<-'2022-11-01'
+
+
+# after Results
+
+datos_importados_rds_sum_tbl <- datos_importados_rds %>%
+dfSummary(plain.ascii = FALSE, style = "grid", graph.magnif = 0.75, method="render")
+
+
+datos_importados_rds_sum_tbl%>%
+    select(-text.graph) %>%
+    knitr::kable(align = "c")
+
+```
+
+
+```{r plots}
+
+plot1<-ggplot(data=datos_importados_rds, mapping = aes(x=fecha_ride, y = after_stat(count))) +
+  geom_freqpoly(size=1) +
+  theme(axis.text.x=element_text(angle = 30, hjust = 1)) +
+  scale_x_date(breaks = "1 month", expand = c(0, 0),limits = as.Date(c("2022-10-31","2024-11-01")))
+plot1
+
+
+plot2 <- datos_importados_rds %>% ggplot(aes(member_casual, fill = member_casual)) %+% geom_bar(position = "dodge")
+plot2
+
+plot3 <- datos_importados_rds %>% ggplot(aes(start_station_name, fill = start_station_name)) %+% geom_bar(position = "dodge") %+%
+  theme(axis.text.x=element_text(angle = 30, hjust = 1))
+plot3
+
+plot4 <- datos_importados_rds %>% ggplot(aes(rideable_type, fill = rideable_type)) %+% geom_bar(position = "dodge") %+%
+  theme(axis.text.x=element_text(angle = 30, hjust = 1))
+plot4
+
+plot5 <-    
+ ggplot(datos_importados_rds, aes(member_casual,duracion_min)) +
+  geom_boxplot(aes(colour = member_casual))
+plot5
+
+plot6 <-    
+ ggplot(datos_importados_rds, aes(start_station_name,duracion_min)) +
+  geom_boxplot(aes(colour = start_station_name))
+plot6
+
+plot7 <-    
+ ggplot(datos_importados_rds, aes(rideable_type,duracion_min)) +
+  geom_boxplot(aes(colour = rideable_type))
+plot7
+
+
+plot11<-ggplot(data=datos_importados_rds, mapping = aes(x=fecha_ride, y = after_stat(count))) +
+  geom_freqpoly(size=1,mapping = aes(colour = member_casual)) +
+  theme(axis.text.x=element_text(angle = 30, hjust = 1)) +
+  scale_x_date(breaks = "1 month", expand = c(0, 0),limits = as.Date(c("2022-10-31","2024-11-01")))
+plot11
+
+
+plot12<-ggplot(data=datos_importados_rds, mapping = aes(x=fecha_ride, y = after_stat(count))) +
+  geom_freqpoly(size=1,mapping = aes(colour = start_station_name)) +
+  theme(axis.text.x=element_text(angle = 30, hjust = 1)) +
+  scale_x_date(breaks = "1 month", expand = c(0, 0),limits = as.Date(c("2022-10-31","2024-11-01")))
+plot12
+
+plot13<-ggplot(data=datos_importados_rds, mapping = aes(x=fecha_ride, y = after_stat(count))) +
+  geom_freqpoly(size=1,mapping = aes(colour = rideable_type)) +
+  theme(axis.text.x=element_text(angle = 30, hjust = 1)) +
+  scale_x_date(breaks = "1 month", expand = c(0, 0),limits = as.Date(c("2022-10-31","2024-11-01")))
+plot13
+
+
+library(gridExtra)
+grid.arrange(plot1, plot2, plot3,plot4,plot5,plot6,plot7,plot11, plot12,plot13, ncol = 2)
+
+
+```
+
+
+```{r analisis_stationMiss}
+datos_importados_rdsf<-datos_importados_rds%>%
+    filter(start_station_name %in% c("Liberty St & Nassau St"))
+summary(datos_importados_rdsf)
+
+```

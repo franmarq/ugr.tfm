@@ -1,0 +1,95 @@
+---
+title: "TFM - Citi Bike System Analysis"
+author: "franmarq@gmail.com"
+date: "2024-11-09"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#library(openxlsx)
+library(tidyverse)
+library(lubridate)
+library(summarytools)
+library(knitr)
+
+```
+
+configuramos el directorio local de trabajo. 
+
+Cargamos las librerias de trabajo e Importamos la data previamente ubicada en el folder /data
+
+
+```{r prepdata}
+setwd('C:/Users/franm/OneDrive/Documents/Personales/Javier/Academicos/UGR - Estadistica Aplicada/Materias/24-25/TFM')
+
+# Leer el archivo RDS
+data_citybike <- "data/datos_filtrados2.rds"
+
+datos_rds <- readRDS(data_citybike)
+
+datos_rds%>%
+  glimpse()
+
+```
+
+Aplicamos algunes ajustes iniciales al conjunto de forma de no tener problemas asociados a datos faltantes, incongruentes, fuera de rango   
+
+```{r evaltrans, results='asis'}
+## Generar un resumen del conjunto de datos del tren
+
+#No datos faltantes
+datos_rds<-na.omit(datos_rds)
+
+
+#adjustments by imputation values
+datos_rds$duracion_min[datos_rds$duracion_min < 0]<-0
+datos_rds$fecha_ride[datos_rds$fecha_ride<'2022-11-01']<-'2022-11-01'
+datos_rds$started_at[datos_rds$started_at<'2022-11-01']<-'2022-11-01'
+
+
+# after Results
+datos_rds_sum_tbl <- datos_rds %>%
+dfSummary(plain.ascii = FALSE, style = "grid", graph.magnif = 0.75, method="render")
+
+
+datos_rds_sum_tbl%>%
+    select(-text.graph) %>%
+    knitr::kable(align = "c")
+
+```
+
+Inicialmente tenemos 8 variables, de las cuales 
+
+
+
+
+```{r readWeather}
+setwd('C:/Users/franm/OneDrive/Documents/Personales/Javier/Academicos/UGR - Estadistica Aplicada/Materias/24-25/TFM')
+
+datos_clima<- read.csv("data/NYC weather 2022-2024 v2.csv")
+
+datos_clima%>%
+  glimpse()
+  
+```
+
+
+```{r readtraffic}
+setwd('C:/Users/franm/OneDrive/Documents/Personales/Javier/Academicos/UGR - Estadistica Aplicada/Materias/24-25/TFM')
+
+datos_trafico<- read.csv("data/Automated_Traffic_Volume_Counts_20250802.csv")
+
+
+condicion_eliminar <- (datos_trafico$Yr < 2022) | ((datos_trafico$M < 11) & (datos_trafico$Yr == 2022)) | (datos_trafico$Yr > 2024) | ((datos_trafico$M > 10) & (datos_trafico$Yr == 2024))
+
+datos_trafico <- datos_trafico[!condicion_eliminar, ]
+
+datos_trafico%>%
+  glimpse()
+ 
+
+```

@@ -1,0 +1,90 @@
+---
+title: "TFM - Citi Bike System Analysis"
+author: "franmarq@gmail.com"
+date: "2024-11-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+```{r prepdata}
+# Cargar las librerías necesarias
+library(tidyverse)
+
+# Definir la ruta a la carpeta de los archivos
+ruta_carpeta <- "C:/Users/franm/OneDrive/Documents/Personales/Javier/Academicos/UGR - Estadistica Aplicada/Materias/24-25/TFM/data/nyc/
+citibike-tripdata"
+```
+
+```{r read_allcsv }
+
+# OPTION 1. ALL CSV IN THE FOLDER
+
+# Obtiene los nombres de todos los archivos CSV en la carpeta
+archivos_csv <- list.files(path = ruta_carpeta, pattern = "\\.csv$")
+
+# Función para leer un archivo CSV, filtrar y retornar un DataFrame
+
+leer_y_filtrar <- function(archivo) {
+  ruta_completa <- file.path(ruta_carpeta, archivo)
+  read_csv(ruta_completa, col_names = TRUE) %>%
+    select(rideable_type, started_at, ended_at, start_station_name, end_station_name, member_casual) %>%
+    filter(start_station_name %in% c("Liberty St & Nassau St"))
+}
+
+# Aplicar la función a cada archivo y combinar los resultados en un solo DataFrame
+datos_filtrados <- map_df(archivos_csv, leer_y_filtrar)
+
+# Visualizar los primeros registros del DataFrame resultante
+head(datos_filtrados)
+
+```
+
+    filter(start_station_name %in% c("Central Park S & 6 Ave",
+                                    "E 41 St & Madison Ave (SE corner)",
+                                    "Liberty St & Nassau St",
+                                    "W 116 St & Amsterdam Ave",
+                                    "Mercer St & Spring St"))
+
+
+```{r read_filesep}
+
+# OPTION 2. SOME CSV IN THE FOLDER
+
+
+# Crear una lista con los nombres de los archivos a leer
+archivos <- paste0(ruta_carpeta, "/", c("202410-citibike-tripdata_1.csv", 
+                                      "202410-citibike-tripdata_2.csv",
+                                      "202410-citibike-tripdata_3.csv",
+                                      "202410-citibike-tripdata_4.csv",
+                                      "202410-citibike-tripdata_5.csv",
+                                      "202410-citibike-tripdata_6.csv"))
+
+# Función para leer un archivo CSV, filtrar y retornar un DataFrame
+
+leer_y_filtrar <- function(archivo) {
+  read_csv(archivo, col_names = TRUE) %>%
+    select(rideable_type, started_at, ended_at, start_station_name, end_station_name, member_casual) %>%
+    filter(start_station_name %in% c("Liberty St & Nassau St"))
+}
+
+# Aplicar la función a cada archivo y combinar los resultados en un solo DataFrame
+datos_filtrados <- map_df(archivos, leer_y_filtrar)
+
+# Visualizar los primeros registros del DataFrame resultante
+head(datos_filtrados)
+
+```
+
+
+    filter(start_station_name %in% c("Central Park S & 6 Ave",
+                                    "E 41 St & Madison Ave (SE corner)",
+                                    "Liberty St & Nassau St",
+                                    "W 116 St & Amsterdam Ave",
+                                    "Mercer St & Spring St"))
+
