@@ -27,11 +27,16 @@ Cargamos las librerias de trabajo e Importamos la data previamente ubicada en el
 setwd('C:/Users/franm/OneDrive/Documents/Personales/Javier/Academicos/UGR - Estadistica Aplicada/Materias/24-25/TFM')
 
 # Leer el archivo RDS
-data_citybike <- "data/datos_filtrados2.rds"
+data_citybike <- "data/citybike/datos_filtrados.rds"
+data_citybike2 <- "data/citybike/datos_filtrados2.rds"
 
 datos_rds <- readRDS(data_citybike)
+datos_rds2 <- readRDS(data_citybike2)
 
 datos_rds%>%
+  glimpse()
+
+datos_rds2%>%
   glimpse()
 
 ```
