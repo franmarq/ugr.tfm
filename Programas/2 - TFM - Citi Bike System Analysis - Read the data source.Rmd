@@ -73,11 +73,57 @@ Inicialmente tenemos 8 variables, de las cuales
 
 
 ```{r readWeather}
-setwd('C:/Users/franm/OneDrive/Documents/Personales/Javier/Academicos/UGR - Estadistica Aplicada/Materias/24-25/TFM')
+#Lectura de datos climaticos
 
-datos_clima<- read.csv("data/NYC weather 2022-2024 v2.csv")
+#setwd('C:/Users/franm/OneDrive/Documents/Personales/Javier/Academicos/UGR - Estadistica Aplicada/Materias/24-25/TFM')
+
+#getwd()
+
+#datos_clima<- read.csv("data/NYC weather 2022-2024 v2.csv")
+
+datos_clima<- read.csv("C:/Users/franm/OneDrive/Documents/Personales/Javier/Academicos/UGR - Estadistica Aplicada/Materias/24-25/TFM/data/bquxjob_70425b88_19a27917339.csv")
+
 
 datos_clima%>%
+  glimpse()
+  
+```
+
+
+```{r readWeatherBQ}
+# Cargar el paquete cada vez que inicies R
+library(bigrquery)
+
+
+# Autenticar tu sesión
+bq_auth()
+
+
+# 1. ---- Define el ID de tu proyecto en GCP ----
+project_id <- "api-public-data-access"
+
+# 2. ---- Define la consulta SQL ----
+sql_query <- "
+SELECT *
+FROM `bigquery-public-data.noaa_gsod.gsod20*`
+WHERE stn = '725053'
+  -- 1. Limita las tablas a escanear solo a los años relevantes
+  AND _TABLE_SUFFIX BETWEEN '22' AND '25'
+  -- 2. Crea una fecha y filtra por el rango exacto
+  AND PARSE_DATE('%Y%m%d', CONCAT(year, mo, da)) BETWEEN '2022-10-01' AND '2025-09-30'
+ORDER BY year, mo, da
+limit 10000
+"
+
+# 3. ---- Ejecuta la consulta ----
+bq_job <- bq_project_query(project_id, sql_query)
+
+
+# 4. ---- Descarga los resultados a un data frame de R ----
+datos_clima_nyc <- bq_table_download(bq_job)
+
+
+datos_clima_nyc%>%
   glimpse()
   
 ```
@@ -89,7 +135,7 @@ setwd('C:/Users/franm/OneDrive/Documents/Personales/Javier/Academicos/UGR - Esta
 datos_trafico<- read.csv("data/Automated_Traffic_Volume_Counts_20250802.csv")
 
 
-condicion_eliminar <- (datos_trafico$Yr < 2022) | ((datos_trafico$M < 11) & (datos_trafico$Yr == 2022)) | (datos_trafico$Yr > 2024) | ((datos_trafico$M > 10) & (datos_trafico$Yr == 2024))
+condicion_eliminar <- (datos_trafico$Yr < 2022) | ((datos_trafico$M < 10) & (datos_trafico$Yr == 2022)) | (datos_trafico$Yr > 2025) | ((datos_trafico$M > 9) & (datos_trafico$Yr == 2025))
 
 datos_trafico <- datos_trafico[!condicion_eliminar, ]
 
