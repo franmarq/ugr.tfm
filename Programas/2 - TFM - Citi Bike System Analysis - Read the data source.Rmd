@@ -129,18 +129,9 @@ datos_clima_nyc%>%
 ```
 
 
-```{r readtraffic}
-setwd('C:/Users/franm/OneDrive/Documents/Personales/Javier/Academicos/UGR - Estadistica Aplicada/Materias/24-25/TFM')
-
-datos_trafico<- read.csv("data/Automated_Traffic_Volume_Counts_20250802.csv")
-
-
-condicion_eliminar <- (datos_trafico$Yr < 2022) | ((datos_trafico$M < 10) & (datos_trafico$Yr == 2022)) | (datos_trafico$Yr > 2025) | ((datos_trafico$M > 9) & (datos_trafico$Yr == 2025))
-
-datos_trafico <- datos_trafico[!condicion_eliminar, ]
-
-datos_trafico%>%
-  glimpse()
+```{r proc_datos_clima_nyc}
+datos_clima_nyc2 <- datos_clima_nyc %>%
+  select(date,temp, visib,wdsp,max,min,prcp,fog,rain_drizzle,snow_ice_pellets,hail,thunder,tornado_funnel_cloud)
  
 
 ```
