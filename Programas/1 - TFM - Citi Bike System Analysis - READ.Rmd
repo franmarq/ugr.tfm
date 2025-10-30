@@ -117,18 +117,49 @@ print(tiempo_transcurrido)
 ```
 
 
-
-```{r read rds}
-# Cargar los datos guardados
-#datos_importados_rds <- readRDS(ruta_salida)
-#datos_importados_rds <- readRDS(ruta_salida2)
-
-#str(datos_importados_rds)
-
-#comprobar que el file leido es identico a generado antes
-#identical(datos_filtrados2, datos_importados_rds)
+```{r readWeatherBQ}
+# Cargar el paquete cada vez que inicies R
+library(bigrquery)
 
 
-#citibike_2324<-data.frame(datos_importados_rds)
+# Autenticar tu sesión
+bq_auth()
+
+
+# 1. ---- Define el ID de tu proyecto en GCP ----
+project_id <- "api-public-data-access"
+
+# 2. ---- Define la consulta SQL ----
+sql_query <- "
+SELECT *
+FROM `bigquery-public-data.noaa_gsod.gsod20*`
+WHERE stn = '725053'
+  -- 1. Limita las tablas a escanear solo a los años relevantes
+  AND _TABLE_SUFFIX BETWEEN '22' AND '25'
+  -- 2. Crea una fecha y filtra por el rango exacto
+  AND PARSE_DATE('%Y%m%d', CONCAT(year, mo, da)) BETWEEN '2022-10-01' AND '2025-09-30'
+ORDER BY year, mo, da
+limit 10000
+"
+
+# 3. ---- Ejecuta la consulta ----
+bq_job <- bq_project_query(project_id, sql_query)
+
+
+# 4. ---- Descarga los resultados a un data frame de R ----
+datos_clima_nyc <- bq_table_download(bq_job)
+
+
+datos_clima_nyc%>%
+  glimpse()
+
+# Guardar los datos filtrados en formato RDS
+
+
+file_weather<- "C:/Users/franm/OneDrive/Documents/Personales/Javier/Academicos/UGR - Estadistica Aplicada/Materias/24-25/TFM/data/datos_clima_nyc.rds"
+
+
+
+saveRDS(datos_clima_nyc, file = file_weather)
 
 ```
