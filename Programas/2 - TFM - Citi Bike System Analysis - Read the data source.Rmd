@@ -85,6 +85,16 @@ Outfile_clima_nyc_rds<- "data/datos_clima_nyc.rds"
 datos_clima_nyc_rds <- readRDS(Outfile_clima_nyc_rds)
 
 
+#Niveles de severidad por la cantidad de Lluvia
+
+
+
+niveles_severidad <- c("Sin Lluvia", 
+                       "Ligera", 
+                       "Moderada", 
+                       "Fuerte", 
+                       "Dato Faltante")
+
 
 datos_clima_nyc2 <- datos_clima_nyc_rds %>%
   select(date,temp, visib,wdsp,max,min,prcp,fog,rain_drizzle,snow_ice_pellets,hail,thunder,
@@ -92,12 +102,40 @@ datos_clima_nyc2 <- datos_clima_nyc_rds %>%
   mutate(across(c(fog, rain_drizzle, snow_ice_pellets, hail, 
                   thunder, tornado_funnel_cloud), 
                 as.numeric)) %>%
- mutate(bad_weather = fog+rain_drizzle+snow_ice_pellets+hail+thunder+tornado_funnel_cloud)
+  mutate(bad_weather = fog+rain_drizzle+snow_ice_pellets+hail+thunder+tornado_funnel_cloud)%>%
+  mutate(
+      prcp_severidad = case_when(
+        # GSOD usa 99.99 para datos faltantes
+        prcp >= 99             ~ "Dato Faltante", 
+        # Lógica de clasificación de 24 horas
+        prcp == 0              ~ "Sin Lluvia",
+        prcp < 0.40            ~ "Ligera",
+        prcp < 2.00            ~ "Moderada",
+        TRUE                   ~ "Fuerte" 
+        ),# 'TRUE' actúa como el 'else' final (cualquier cosa >= 4.00)
+      prcp_severidad = factor(prcp_severidad, levels = niveles_severidad)
+    )
+  
+# --- Verifiquemos el resultado ---
+# 1. Mira las primeras filas
+head(datos_clima_nyc2)
+
+# 2. Haz una tabla de frecuencia para ver si funcionó
+print(count(datos_clima_nyc2, prcp_severidad))
+
+
+summary(datos_clima_nyc2)
+
+plot(datos_clima_nyc2$date,datos_clima_nyc2$prcp)
+
+mi_tabla_base <- table(datos_clima_nyc2$prcp_severidad, datos_clima_nyc2$bad_weather)
+
+# Imprimir la tabla
+print(mi_tabla_base)
 
 ```
 
 ```{r freq_weather}
-
 
 datos_clima_nyc2%>%
   glimpse()
@@ -106,12 +144,16 @@ datos_clima_nyc2%>%
 tabla_frecuencias <- datos_clima_nyc2 %>%
   count(bad_weather, sort = TRUE, name = "frecuencia") %>%
   mutate(
-    porcentaje_num = round((frecuencia / sum(frecuencia)) * 100, 2))
+    porcentaje_num = round((frecuencia / sum(frecuencia)) * 100, 2)
+    )
+
+datos_clima_nyc2 <- datos_clima_nyc2 %>%
+  select(-fog,-rain_drizzle,-snow_ice_pellets,-hail,-thunder,-tornado_funnel_cloud)
 
 
 # Muestra la tabla en la consola
 print(tabla_frecuencias)
 
-summary(datos_clima_nyc2$prcp)
+
 
 ```
