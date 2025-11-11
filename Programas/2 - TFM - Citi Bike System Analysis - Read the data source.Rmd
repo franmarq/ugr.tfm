@@ -15,6 +15,7 @@ library(tidyverse)
 library(lubridate)
 library(summarytools)
 library(knitr)
+library(geosphere)
 
 ```
 
@@ -23,40 +24,107 @@ configuramos el directorio local de trabajo.
 Cargamos las librerias de trabajo e Importamos la data previamente ubicada en el folder /data
 
 
-```{r prepdata}
+```{r ReadDatacitibike}
 
-# DATOS DE PRESTAMOS CITYBIKE:
+# LECTURA DATOS CITYBIKE:
 
 setwd('C:/Users/franm/OneDrive/Documents/Personales/Javier/Academicos/UGR - Estadistica Aplicada/Materias/24-25/TFM')
 
 # Leer el archivo RDS
-data_citybike <- "data/citybike/datos_filtrados.rds"
-data_citybike2 <- "data/citybike/datos_filtrados2.rds"
+data_citybike <- "data/citybike/datos_filtrados.rds" #datos de salidas desde la estacion
+data_citybike2 <- "data/citybike/datos_filtrados2.rds" #datos de llegadas a la estacion
 
 datos_rds <- readRDS(data_citybike)
 datos_rds2 <- readRDS(data_citybike2)
+
+```
+
+Aplicamos algunes ajustes iniciales al conjunto de forma de no tener problemas asociados a datos faltantes, incongruentes, fuera de rango   
+
+```{r ProcDataCitibike}
+
+# Convertir started_at y ended_at a objetos de fecha y hora
+
+datos_rds$dir<-'salida'
+datos_rds2$dir<-'entrada'
+
+#fusion datos entrada salida
+datos_citibike <- bind_rows(datos_rds, datos_rds2)
+
+rm(datos_rds)
+rm(datos_rds2)
+
+#No datos faltantes
+datos_citibike<-na.omit(datos_citibike)
+
+#adjustments by imputation values
+datos_citibike$duracion_min[datos_citibike$duracion_min < 0]<-0
+#datos_citibike$duracion_min[datos_citibike$duracion_min > 60]<-60
+
+datos_citibike$fecha_ride[datos_citibike$fecha_ride<'2022-11-01']<-'2022-11-01'
+datos_citibike$started_at[datos_citibike$started_at<'2022-11-01']<-'2022-11-01'
+
+
+#calculo de algunas variables
+datos_citibike <- datos_citibike %>%
+  mutate(
+    started_at = ymd_hms(started_at),
+    ended_at = ymd_hms(ended_at),
+    hora_ini = hour(started_at),
+    hora_fin = hour(ended_at),
+    fecha_ride =   as_date(started_at),
+    duracion = as.numeric(round(difftime(ended_at, started_at, units = "mins"), 2))
+  )
+
+#Misma ubicacion
+datos_citibike$same_location<- ifelse(datos_citibike$start_lat == datos_citibike$end_lat & datos_citibike$start_lng==datos_citibike$end_lng, 1, 0)
+
+#Distancia mts origen/destino 
+datos_citibike <- datos_citibike %>%
+  mutate(
+    distancia = as.integer(distHaversine(
+      # Punto 1: (Lon, Lat)
+      cbind(start_lng, start_lat),
+      # Punto 2: (Lon, Lat)
+      cbind(end_lng, end_lat)
+    )
+  ))
+
+
+```
+
+
+```{r ReadDataClima}
+
+# DATOS CLIMA: Seleccion de las variables 
+
+
+setwd('C:/Users/franm/OneDrive/Documents/Personales/Javier/Academicos/UGR - Estadistica Aplicada/Materias/24-25/TFM')
+
+Outfile_clima_nyc_rds<- "data/datos_clima_nyc.rds"
+
+datos_clima_nyc_rds <- readRDS(Outfile_clima_nyc_rds)
+
+```
+
+
+
+
+
+
+
+
+
+
+```{r ReportCitibike}
+## REPORTES
+
 
 datos_rds%>%
   glimpse()
 
 datos_rds2%>%
   glimpse()
-
-```
-
-Aplicamos algunes ajustes iniciales al conjunto de forma de no tener problemas asociados a datos faltantes, incongruentes, fuera de rango   
-
-```{r evaltrans, results='asis'}
-## Generar un resumen del conjunto de datos del tren
-
-#No datos faltantes
-datos_rds<-na.omit(datos_rds)
-
-
-#adjustments by imputation values
-datos_rds$duracion_min[datos_rds$duracion_min < 0]<-0
-datos_rds$fecha_ride[datos_rds$fecha_ride<'2022-11-01']<-'2022-11-01'
-datos_rds$started_at[datos_rds$started_at<'2022-11-01']<-'2022-11-01'
 
 
 # after Results
@@ -75,19 +143,8 @@ Inicialmente tenemos 8 variables, de las cuales
 
 
 
-```{r proc_datos_clima_nyc}
-
-# DATOS DE CLIMA: Seleccion de las variables 
-setwd('C:/Users/franm/OneDrive/Documents/Personales/Javier/Academicos/UGR - Estadistica Aplicada/Materias/24-25/TFM')
-
-Outfile_clima_nyc_rds<- "data/datos_clima_nyc.rds"
-
-datos_clima_nyc_rds <- readRDS(Outfile_clima_nyc_rds)
-
-
+```{r ProcDataClima}
 #Niveles de severidad por la cantidad de Lluvia
-
-
 
 niveles_severidad <- c("Sin Lluvia", 
                        "Ligera", 
@@ -115,9 +172,7 @@ datos_clima_nyc2 <- datos_clima_nyc_rds %>%
         ),# 'TRUE' actúa como el 'else' final (cualquier cosa >= 4.00)
       prcp_severidad = factor(prcp_severidad, levels = niveles_severidad)
     )
-  
-# --- Verifiquemos el resultado ---
-# 1. Mira las primeras filas
+
 head(datos_clima_nyc2)
 
 # 2. Haz una tabla de frecuencia para ver si funcionó
@@ -135,7 +190,7 @@ print(mi_tabla_base)
 
 ```
 
-```{r freq_weather}
+```{r ReportDataclima}
 
 datos_clima_nyc2%>%
   glimpse()

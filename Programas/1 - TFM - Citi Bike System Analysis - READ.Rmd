@@ -118,6 +118,10 @@ print(tiempo_transcurrido)
 
 
 ```{r readWeatherBQ}
+
+#datos del clima 
+
+
 # Cargar el paquete cada vez que inicies R
 library(bigrquery)
 
