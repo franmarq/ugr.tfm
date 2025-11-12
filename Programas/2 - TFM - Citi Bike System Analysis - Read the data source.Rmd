@@ -48,6 +48,13 @@ Aplicamos algunes ajustes iniciales al conjunto de forma de no tener problemas a
 datos_rds$dir<-'salida'
 datos_rds2$dir<-'entrada'
 
+datos_rds$date<-datos_rds$fecha_ride
+datos_rds2$date<-datos_rds2$fecha_ride
+
+datos_rds$fecha_ride<-NULL
+datos_rds2$fecha_ride<-NULL
+
+
 #fusion datos entrada salida
 datos_citibike <- bind_rows(datos_rds, datos_rds2)
 
@@ -61,7 +68,9 @@ datos_citibike<-na.omit(datos_citibike)
 datos_citibike$duracion_min[datos_citibike$duracion_min < 0]<-0
 #datos_citibike$duracion_min[datos_citibike$duracion_min > 60]<-60
 
-datos_citibike$fecha_ride[datos_citibike$fecha_ride<'2022-11-01']<-'2022-11-01'
+
+
+datos_citibike$date[datos_citibike$date<'2022-11-01']<-'2022-11-01'
 datos_citibike$started_at[datos_citibike$started_at<'2022-11-01']<-'2022-11-01'
 
 
@@ -72,7 +81,7 @@ datos_citibike <- datos_citibike %>%
     ended_at = ymd_hms(ended_at),
     hora_ini = hour(started_at),
     hora_fin = hour(ended_at),
-    fecha_ride =   as_date(started_at),
+    date =   as_date(started_at),
     duracion = as.numeric(round(difftime(ended_at, started_at, units = "mins"), 2))
   )
 
@@ -97,13 +106,106 @@ datos_citibike <- datos_citibike %>%
 ```{r ReadDataClima}
 
 # DATOS CLIMA: Seleccion de las variables 
-
-
 setwd('C:/Users/franm/OneDrive/Documents/Personales/Javier/Academicos/UGR - Estadistica Aplicada/Materias/24-25/TFM')
 
 Outfile_clima_nyc_rds<- "data/datos_clima_nyc.rds"
 
-datos_clima_nyc_rds <- readRDS(Outfile_clima_nyc_rds)
+datos_clima <- readRDS(Outfile_clima_nyc_rds)
+
+```
+
+
+```{r ProcDataClima}
+#Niveles de severidad por la cantidad de Lluvia
+
+niveles_lluvia <- c("Sin Lluvia", 
+                       "Ligera", 
+                       "Moderada", 
+                       "Fuerte", 
+                       "Dato Faltante")
+niveles_viento <- c("Sin viento", 
+                       "Ligero", 
+                       "Fuerte", 
+                       "Dato Faltante")
+niveles_temp <- c("Frio","Templada","Caliente","Dato Faltante")
+
+
+
+datos_clima <- datos_clima %>%
+#  select(date,temp, visib,wdsp,max,min,prcp,fog,rain_drizzle,snow_ice_pellets,hail,thunder,
+#         tornado_funnel_cloud) %>%
+  mutate(across(c(fog, rain_drizzle, snow_ice_pellets, hail, 
+                  thunder, tornado_funnel_cloud, wdsp, mxpsd), 
+                as.numeric)) %>%
+  mutate(mal_clima = fog+rain_drizzle+snow_ice_pellets+hail+thunder+tornado_funnel_cloud)%>%
+  mutate(
+      lluvia_nivel = case_when(
+        # GSOD usa 99.99 para datos faltantes
+        prcp >= 99             ~ "Dato Faltante", 
+        # Lógica de clasificación de 24 horas
+        prcp == 0              ~ "Sin Lluvia",
+        prcp < 0.40            ~ "Ligera",
+        prcp < 2.00            ~ "Moderada",
+        TRUE                   ~ "Fuerte" 
+        ),# 'TRUE' actúa como el 'else' final (cualquier cosa >= 4.00)
+      lluvia_nivel = factor(lluvia_nivel, levels = niveles_lluvia)
+    )%>%
+  mutate(
+      viento_nivel = case_when(
+        # GSOD usa 99.99 para datos faltantes
+        mxpsd >= 99             ~ "Dato Faltante", 
+        # Lógica de clasificación de 24 horas
+        mxpsd == 0              ~ "Sin viento",
+        mxpsd < 20               ~ "Ligero",
+        TRUE                   ~ "Fuerte" 
+        ),# 'TRUE' actúa como el 'else' final (cualquier cosa >= 4.00)
+      viento_nivel = factor(viento_nivel, levels = niveles_viento)
+    )%>%
+  mutate(
+      temp_nivel = case_when(
+        max >= 9999             ~ "Dato Faltante", 
+        max < 50.0              ~ "Frio",
+        max < 80.0               ~ "Templada",
+        TRUE                   ~ "Calor" 
+        ),
+      temp_nivel = factor(temp_nivel, levels = niveles_temp)
+    )
+
+  
+datos_clima$mal_clima<-ifelse(datos_clima$prcp>0 & datos_clima$mal_clima==0,1,datos_clima$mal_clima)
+
+plot(datos_clima$date,datos_clima$prcp)
+
+#velocidad del viento
+#datos_clima$wdsp<-as.numeric(datos_clima$wdsp)
+#datos_clima$mxpsd<-as.numeric(datos_clima$mxpsd)
+
+plot(datos_clima$date,datos_clima$wdsp)
+
+hist(datos_clima$wdsp)
+hist(datos_clima$mxpsd)
+hist(datos_clima$max)
+
+
+
+freq(datos_clima$lluvia_nivel)
+freq(datos_clima$viento_nivel)
+freq(datos_clima$temp_nivel)
+freq(datos_clima$max)
+
+mi_tabla_base <- table(datos_clima$lluvia_nivel, datos_clima$mal_clima)
+
+# Imprimir la tabla
+print(mi_tabla_base)
+
+datos_clima2 <- datos_clima %>%
+  select(date,max,prcp,mxpsd,mal_clima,lluvia_nivel, viento_nivel, temp_nivel)
+
+```
+
+```{r fusion}
+
+datos_clima3 <- left_join(datos_citibike, datos_clima2, by = "date")
 
 ```
 
@@ -111,13 +213,8 @@ datos_clima_nyc_rds <- readRDS(Outfile_clima_nyc_rds)
 
 
 
-
-
-
-
-
 ```{r ReportCitibike}
-## REPORTES
+## REPORTES CITIBIKE
 
 
 datos_rds%>%
@@ -143,52 +240,7 @@ Inicialmente tenemos 8 variables, de las cuales
 
 
 
-```{r ProcDataClima}
-#Niveles de severidad por la cantidad de Lluvia
 
-niveles_severidad <- c("Sin Lluvia", 
-                       "Ligera", 
-                       "Moderada", 
-                       "Fuerte", 
-                       "Dato Faltante")
-
-
-datos_clima_nyc2 <- datos_clima_nyc_rds %>%
-  select(date,temp, visib,wdsp,max,min,prcp,fog,rain_drizzle,snow_ice_pellets,hail,thunder,
-         tornado_funnel_cloud) %>%
-  mutate(across(c(fog, rain_drizzle, snow_ice_pellets, hail, 
-                  thunder, tornado_funnel_cloud), 
-                as.numeric)) %>%
-  mutate(bad_weather = fog+rain_drizzle+snow_ice_pellets+hail+thunder+tornado_funnel_cloud)%>%
-  mutate(
-      prcp_severidad = case_when(
-        # GSOD usa 99.99 para datos faltantes
-        prcp >= 99             ~ "Dato Faltante", 
-        # Lógica de clasificación de 24 horas
-        prcp == 0              ~ "Sin Lluvia",
-        prcp < 0.40            ~ "Ligera",
-        prcp < 2.00            ~ "Moderada",
-        TRUE                   ~ "Fuerte" 
-        ),# 'TRUE' actúa como el 'else' final (cualquier cosa >= 4.00)
-      prcp_severidad = factor(prcp_severidad, levels = niveles_severidad)
-    )
-
-head(datos_clima_nyc2)
-
-# 2. Haz una tabla de frecuencia para ver si funcionó
-print(count(datos_clima_nyc2, prcp_severidad))
-
-
-summary(datos_clima_nyc2)
-
-plot(datos_clima_nyc2$date,datos_clima_nyc2$prcp)
-
-mi_tabla_base <- table(datos_clima_nyc2$prcp_severidad, datos_clima_nyc2$bad_weather)
-
-# Imprimir la tabla
-print(mi_tabla_base)
-
-```
 
 ```{r ReportDataclima}
 
