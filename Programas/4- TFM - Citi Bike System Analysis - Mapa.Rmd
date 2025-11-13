@@ -1,0 +1,89 @@
+---
+title: "4- TFM - Citi Bike System Analysis - Mapa"
+author: "franmarq@gmail.com"
+date: "2025-11-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r load}
+library(ggplot2)
+library(sf)
+library(geosphere)
+library(ggspatial) # Para el mapa base de OSM
+```
+
+
+
+```{r Lgeodesicas}
+# --- 3. Calcular las Líneas Geodésicas ---
+# (Este paso es idéntico al anterior)
+lista_lineas <- lapply(1:nrow(viajes), function(i) {
+  linea_geodesica <- gcIntermediate(
+    p1 = c(viajes[i, ]$lon_ini, viajes[i, ]$lat_ini),
+    p2 = c(viajes[i, ]$lon_fin, viajes[i, ]$lat_fin),
+    n = 50, # 50 puntos para suavizar la curva
+    addStartEnd = TRUE, 
+    sp = FALSE
+  )
+  st_linestring(linea_geodesica)
+})
+
+# --- 4. Convertir las Líneas en un Objeto 'sf' ---
+# Establecer el sistema de coordenadas (CRS 4326 = Lat/Lon WGS84)
+lineas_sfc <- st_sfc(lista_lineas, crs = 4326)
+
+# Corregir líneas que cruzan el antimeridiano (ej. Pacífico)
+lineas_sfc_corregidas <- st_wrap_dateline(lineas_sfc, options = c("WRAPDATELINE=YES"))
+
+# Combinar las geometrías con tus datos originales
+# (Esto es útil si tienes otras columnas en 'viajes' que quieras usar, como 'origen')
+lineas_sf <- st_sf(viajes, geometry = lineas_sfc_corregidas)
+```
+
+
+```{r dibujar}
+# --- 5. Graficar con ggplot2 y OSM ---
+
+ggplot() +
+  
+  # Capa 1: El mapa base de OpenStreetMap
+  annotation_map_tile(type = "osm", zoomin = 0, quiet = TRUE) +
+  
+  # Capa 2: Tus trayectorias
+  # (Si no tienes una columna 'origen' para el color, puedes quitar aes(color = ...))
+  geom_sf(data = lineas_sf, 
+          linewidth = 1.1, 
+          alpha = 0.8, 
+          color = "red", # O puedes mapear un color, ej: aes(color = origen)
+          inherit.aes = FALSE) +
+  
+  # Capa 3: Puntos de inicio y fin (Opcional, pero recomendado)
+  geom_point(data = viajes, aes(x = lon_ini, y = lat_ini), 
+             color = "blue", size = 2) +
+  geom_point(data = viajes, aes(x = lon_fin, y = lat_fin), 
+             color = "blue", size = 2) +
+  
+  # Capa 4: Proyección del mapa (Mercator, para OSM)
+  coord_sf(
+    crs = st_crs(3857), 
+    ylim = c(-7500000, 18000000), 
+    expand = FALSE
+  ) +
+  
+  labs(
+    title = "Mis Trayectorias de Viaje",
+    subtitle = "Sobre un mapa base de OpenStreetMap"
+  ) +
+  theme_bw() +
+  theme(
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank()
+  )
+```

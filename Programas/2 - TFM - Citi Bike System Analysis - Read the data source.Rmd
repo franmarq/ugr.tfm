@@ -205,7 +205,7 @@ datos_clima2 <- datos_clima %>%
 
 ```{r fusion}
 
-datos_clima3 <- left_join(datos_citibike, datos_clima2, by = "date")
+datos_citibike2 <- left_join(datos_citibike, datos_clima2, by = "date")
 
 ```
 
